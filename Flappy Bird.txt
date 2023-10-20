@@ -1,0 +1,151 @@
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const birdImage = new Image();
+birdImage.src = 'bird.png';
+
+const bird = {
+    x: 50,
+    y: canvas.height / 2 - 15,
+    width: 40,
+    height: 30,
+    gravity: 0.5,
+    jumpPower: 10,
+    velocity: 0,
+};
+
+const pipes = [];
+const pipeWidth = 50;
+const pipeGap = 150;
+const pipeSpeed = 2;
+
+const floorHeight = 20; // Height of the floor
+
+let score = 0;
+let gameStarted = false;
+
+function drawBird() {
+    ctx.drawImage(birdImage, bird.x, bird.y, bird.width, bird.height);
+}
+
+function drawPipe(x, height) {
+    ctx.fillStyle = "#009900";
+    ctx.fillRect(x, 0, pipeWidth, height);
+    ctx.fillRect(x, height + pipeGap, pipeWidth, canvas.height - height - pipeGap);
+}
+
+function drawFloor() {
+    ctx.fillStyle = "#ff5733";
+    ctx.fillRect(0, canvas.height - floorHeight, canvas.width, floorHeight);
+}
+
+function drawStartButton() {
+    ctx.fillStyle = "#000";
+    ctx.font = "24px Arial";
+    ctx.fillText("Click to Start", canvas.width / 2 - 80, canvas.height / 2);
+}
+
+function collisionDetection(pipe) {
+    if (
+        bird.x + bird.width > pipe.x &&
+        bird.x < pipe.x + pipeWidth &&
+        (bird.y < pipe.height || bird.y + bird.height > pipe.height + pipeGap)
+    ) {
+        return true;
+    }
+    return false;
+}
+
+function startGame() {
+    if (!gameStarted) {
+        gameStarted = true;
+        bird.y = canvas.height / 2 - 15;
+        pipes.length = 0;
+        score = 0;
+        bird.velocity = 0;
+        draw();
+    }
+}
+
+function restartGame() {
+    bird.y = canvas.height / 2 - 15;
+    pipes.length = 0;
+    score = 0;
+    bird.velocity = 0;
+    gameStarted = true;
+    draw();
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw bird
+    drawBird();
+    bird.velocity += bird.gravity;
+    bird.y += bird.velocity;
+
+    // Draw pipes
+    if (frames % 120 === 0 && gameStarted) {
+        const pipeHeight = Math.floor(Math.random() * (canvas.height - pipeGap));
+        pipes.push({ x: canvas.width, height: pipeHeight });
+    }
+
+    for (let i = 0; i < pipes.length; i++) {
+        drawPipe(pipes[i].x, pipes[i].height);
+        pipes[i].x -= pipeSpeed;
+
+        if (collisionDetection(pipes[i])) {
+            gameStarted = false;
+            drawGameOverMessage();
+            return;
+        }
+
+        if (pipes[i].x + pipeWidth < 0) {
+            pipes.shift();
+            score++;
+        }
+    }
+
+    // Draw the floor
+    drawFloor();
+
+    // Display the score
+    ctx.fillStyle = "#000";
+    ctx.font = "24px Arial";
+    ctx.fillText("Score: " + score, 10, 30);
+
+    frames++;
+    if (!gameStarted) {
+        drawStartButton();
+    } else {
+        requestAnimationFrame(draw);
+    }
+}
+
+let frames = 0;
+canvas.addEventListener("click", () => {
+    if (!gameStarted) {
+        startGame();
+    } else {
+        bird.velocity = -bird.jumpPower;
+    }
+});
+birdImage.onload = draw;
+
+function drawGameOverMessage() {
+    ctx.fillStyle = "#000";
+    ctx.font = "40px Arial";
+    ctx.fillText("Game Over", canvas.width / 2 - 100, canvas.height / 2 - 20);
+
+    // Add a "Restart Game" button
+    const restartButton = document.createElement("button");
+    restartButton.textContent = "Restart Game";
+    restartButton.style.position = "absolute";
+    restartButton.style.top = canvas.offsetTop + canvas.height / 2 + 20 + "px";
+    restartButton.style.left = canvas.offsetLeft + canvas.width / 2 - 70 + "px";
+    restartButton.addEventListener("click", () => {
+        restartGame();
+        document.body.removeChild(restartButton);
+    });
+    document.body.appendChild(restartButton);
+}
